@@ -226,7 +226,7 @@ class SGFormer(torch.nn.Module):
         self,
         x: Tensor,
         edge_index: Tensor,
-        batch: Optional[Tensor],
+        batch: Tensor,
     ) -> Tensor:
         r"""Forward pass.
 
