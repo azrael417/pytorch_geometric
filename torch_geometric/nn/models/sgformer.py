@@ -72,8 +72,8 @@ class SGModule(torch.nn.Module):
         self.attns = torch.nn.ModuleList()
         self.fcs = torch.nn.ModuleList()
         self.fcs.append(torch.nn.Linear(in_channels, hidden_channels))
+        self.initial_bn = torch.nn.LayerNorm(hidden_channels)
         self.bns = torch.nn.ModuleList()
-        self.bns.append(torch.nn.LayerNorm(hidden_channels))
         for _ in range(self.num_layers):
             self.attns.append(
                 SGFormerAttention(hidden_channels, num_heads, hidden_channels))
@@ -97,22 +97,23 @@ class SGModule(torch.nn.Module):
         rev_perm[indices] = torch.arange(len(indices), device=indices.device)
         x = x[indices]
         x, mask = to_dense_batch(x, batch)
-        layer_ = []
+        #layer_ = []
 
         # input MLP layer
         x = self.fcs[0](x)
-        x = self.bns[0](x)
+        x = self.initial_bn(x)
         x = self.activation(x)
         x = F.dropout(x, p=self.dropout, training=self.training)
 
         # store as residual link
-        layer_.append(x)
+        #layer_.append(x)
 
+        # store as residual link  
         last_x = x
-        for i, (attn, bn) in enumerate(zip(self.attns, self.bns[1:])):
-            x = attn(x, mask)
+        for i in range(self.num_layers):
+            x = self.attns[i](x, mask)
             x = (x + last_x) / 2.
-            x = bn(x)
+            x = self.bns[i](x)
             x = self.activation(x)
             x = F.dropout(x, p=self.dropout, training=self.training)
             last_x = x
