@@ -108,13 +108,14 @@ class SGModule(torch.nn.Module):
         # store as residual link
         layer_.append(x)
 
-        for attn, bn, layr in zip(self.attns, self.bns[1:], layer_):
+        last_x = x
+        for i, (attn, bn) in enumerate(zip(self.attns, self.bns[1:])):
             x = attn(x, mask)
-            x = (x + layr) / 2.
+            x = (x + last_x) / 2.
             x = bn(x)
             x = self.activation(x)
             x = F.dropout(x, p=self.dropout, training=self.training)
-            layer_.append(x)
+            last_x = x
 
         x_mask = x[mask]
         # reverse the sorting
