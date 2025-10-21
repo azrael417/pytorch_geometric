@@ -19,13 +19,14 @@ class GraphModule(torch.nn.Module):
     ):
         super().__init__()
 
+        self.num_layers = num_layers
         self.convs = torch.nn.ModuleList()
         self.fcs = torch.nn.ModuleList()
         self.fcs.append(torch.nn.Linear(in_channels, hidden_channels))
 
         self.bns = torch.nn.ModuleList()
         self.bns.append(torch.nn.BatchNorm1d(hidden_channels))
-        for _ in range(num_layers):
+        for _ in range(self.num_layers):
             self.convs.append(GCNConv(hidden_channels, hidden_channels))
             self.bns.append(torch.nn.BatchNorm1d(hidden_channels))
 
@@ -47,8 +48,8 @@ class GraphModule(torch.nn.Module):
         x = F.dropout(x, p=self.dropout, training=self.training)
         last_x = x
 
-        for i, conv in enumerate(self.convs):
-            x = conv(x, edge_index)
+        for i in range(self.num_layers):
+            x = self.convs[i](x, edge_index)
             x = self.bns[i + 1](x)
             x = self.activation(x)
             x = F.dropout(x, p=self.dropout, training=self.training)
@@ -108,7 +109,7 @@ class SGModule(torch.nn.Module):
         layer_.append(x)
 
         for _ in range(self.num_layers):
-            x = self.attn[i](x, mask)
+            x = self.attns[i](x, mask)
             x = (x + layer_[i]) / 2.
             x = self.bns[i + 1](x)
             x = self.activation(x)
