@@ -8,6 +8,27 @@ from torch_geometric.nn.attention import SGFormerAttention
 from torch_geometric.nn.conv import GCNConv
 from torch_geometric.utils import to_dense_batch
 
+class GraphBlock(torch.nn.Module):
+    def __init__(
+        self,
+        hidden_channels,
+        dropout
+    ):
+        super().__init__()
+
+        self.conv = GCNConv(hidden_channels, hidden_channels)
+        self.bn = torch.nn.BatchNorm1d(hidden_channels)
+        self.dropout = dropout
+        self.activation = F.relu
+
+    def forward(self, x, last_x, edge_index):
+        x = self.conv(x, edge_index)
+        x = self.bn(x)
+        x = self.activation(x)
+        x = F.dropout(x, p=self.dropout, training=self.training)
+        x = x + last_x
+        return x
+
 
 class GraphModule(torch.nn.Module):
     def __init__(
@@ -20,40 +41,36 @@ class GraphModule(torch.nn.Module):
         super().__init__()
 
         self.num_layers = num_layers
-        self.convs = torch.nn.ModuleList()
         self.fcs = torch.nn.ModuleList()
         self.fcs.append(torch.nn.Linear(in_channels, hidden_channels))
+        self.initial_bn = torch.nn.BatchNorm1d(hidden_channels)
 
-        self.bns = torch.nn.ModuleList()
-        self.bns.append(torch.nn.BatchNorm1d(hidden_channels))
+        self.blocks = torch.nn.ModuleList()
         for _ in range(self.num_layers):
-            self.convs.append(GCNConv(hidden_channels, hidden_channels))
-            self.bns.append(torch.nn.BatchNorm1d(hidden_channels))
+            self.blocks.append(GraphBlock(hidden_channels, dropout))
 
         self.dropout = dropout
         self.activation = F.relu
 
     def reset_parameters(self):
-        for conv in self.convs:
-            conv.reset_parameters()
-        for bn in self.bns:
-            bn.reset_parameters()
+        self.initial_bn.reset_parameters()
+        for block in self.blocks:
+            block.conv.reset_parameters()
+            block.bn.reset_parameters()
         for fc in self.fcs:
             fc.reset_parameters()
 
     def forward(self, x, edge_index):
         x = self.fcs[0](x)
-        x = self.bns[0](x)
+        x = self.initial_bn(x)
         x = self.activation(x)
         x = F.dropout(x, p=self.dropout, training=self.training)
+        
         last_x = x
+        for block in self.blocks:
+            x = block(x, last_x, edge_index)
+            last_x = x
 
-        for conv, bn in zip(self.conv, self.bns[1:]):
-            x = conv(x, edge_index)
-            x = bn(x)
-            x = self.activation(x)
-            x = F.dropout(x, p=self.dropout, training=self.training)
-            x = x + last_x
         return x
 
     
@@ -98,6 +115,7 @@ class SGModule(torch.nn.Module):
         self.activation = F.relu
 
     def reset_parameters(self):
+        self.initial_bn.reset_parameters()
         for block in self.blocks:
             block.attn.reset_parameters()
             block.bn.reset_parameters()
