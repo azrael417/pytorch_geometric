@@ -60,7 +60,7 @@ class GraphModule(torch.nn.Module):
         for fc in self.fcs:
             fc.reset_parameters()
 
-    def forward(self, x, edge_index):
+    def forward(self, x: Tensor, edge_index: Tensor) -> Tensor:
         x = self.fcs[0](x)
         x = self.initial_bn(x)
         x = self.activation(x)
@@ -122,7 +122,7 @@ class SGModule(torch.nn.Module):
         for fc in self.fcs:
             fc.reset_parameters()
 
-    def forward(self, x: Tensor, batch: Tensor):
+    def forward(self, x: Tensor, batch: Tensor) -> Tensor:
         # to dense batch expects sorted batch
         batch, indices = batch.sort(stable=True)
         rev_perm = torch.empty_like(indices)
