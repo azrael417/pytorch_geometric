@@ -68,7 +68,7 @@ class SGBlock(torch.nn.Module):
     def forward(self, x, last_x, mask):
         x = self.attn(x, mask)
         x = (x + last_x) / 2.
-        x = self.bns(x)
+        x = self.bn(x)
         x = self.activation(x)
         x = F.dropout(x, p=self.dropout, training=self.training)
 
