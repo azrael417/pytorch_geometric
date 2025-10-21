@@ -48,9 +48,9 @@ class GraphModule(torch.nn.Module):
         x = F.dropout(x, p=self.dropout, training=self.training)
         last_x = x
 
-        for i in range(self.num_layers):
-            x = self.convs[i](x, edge_index)
-            x = self.bns[i + 1](x)
+        for conv, bn in zip(self.conv, self.bns[1:]):
+            x = conv(x, edge_index)
+            x = bn(x)
             x = self.activation(x)
             x = F.dropout(x, p=self.dropout, training=self.training)
             x = x + last_x
@@ -108,10 +108,10 @@ class SGModule(torch.nn.Module):
         # store as residual link
         layer_.append(x)
 
-        for i in range(self.num_layers):
-            x = self.attns[i](x, mask)
-            x = (x + layer_[i]) / 2.
-            x = self.bns[i + 1](x)
+        for attn, bn, layr in zip(self.attns, self.bns[1:], layer_):
+            x = attn(x, mask)
+            x = (x + layr) / 2.
+            x = bn(x)
             x = self.activation(x)
             x = F.dropout(x, p=self.dropout, training=self.training)
             layer_.append(x)
