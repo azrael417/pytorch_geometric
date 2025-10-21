@@ -51,7 +51,7 @@ class SGFormerAttention(torch.nn.Module):
                 :math:`\mathbf{M} \in {\{ 0, 1 \}}^{B \times N}` indicating
                 the valid nodes for each graph. (default: :obj:`None`)
         """
-        B, N, *_ = x.shape
+        B, N, _ = x.shape
         qs, ks, vs = self.q(x), self.k(x), self.v(x)
         # reshape and permute q, k and v to proper shape
         # (b, n, num_heads * head_channels) to (b, n, num_heads, head_channels)
