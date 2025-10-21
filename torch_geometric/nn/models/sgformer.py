@@ -56,6 +56,24 @@ class GraphModule(torch.nn.Module):
             x = x + last_x
         return x
 
+    
+class SGBlock(torch.nn.Module):
+    def __init__(self, hidden_channels, num_heads, dropout):
+        super().__init__()
+        self.dropout = dropout
+        self.attn = SGFormerAttention(hidden_channels, num_heads, hidden_channels))
+        self.bn = torch.nn.LayerNorm(hidden_channels)
+        self.activation = F.relu
+
+    def forward(self, x, last_x, mask):
+        x = self.attn(x, mask)
+        x = (x + last_x) / 2.
+        x = self.bns(x)
+        x = self.activation(x)
+        x = F.dropout(x, p=self.dropout, training=self.training)
+
+        return x
+    
 
 class SGModule(torch.nn.Module):
     def __init__(
@@ -69,15 +87,12 @@ class SGModule(torch.nn.Module):
         super().__init__()
 
         self.num_layers = num_layers
-        self.attns = torch.nn.ModuleList()
+        self.blocks = torch.nn.ModuleList()
         self.fcs = torch.nn.ModuleList()
         self.fcs.append(torch.nn.Linear(in_channels, hidden_channels))
         self.initial_bn = torch.nn.LayerNorm(hidden_channels)
-        self.bns = torch.nn.ModuleList()
         for _ in range(self.num_layers):
-            self.attns.append(
-                SGFormerAttention(hidden_channels, num_heads, hidden_channels))
-            self.bns.append(torch.nn.LayerNorm(hidden_channels))
+            self.block.append(SGBlock(hidden_channels, num_heads, dropout))
 
         self.dropout = dropout
         self.activation = F.relu
@@ -97,7 +112,6 @@ class SGModule(torch.nn.Module):
         rev_perm[indices] = torch.arange(len(indices), device=indices.device)
         x = x[indices]
         x, mask = to_dense_batch(x, batch)
-        #layer_ = []
 
         # input MLP layer
         x = self.fcs[0](x)
@@ -105,17 +119,10 @@ class SGModule(torch.nn.Module):
         x = self.activation(x)
         x = F.dropout(x, p=self.dropout, training=self.training)
 
-        # store as residual link
-        #layer_.append(x)
-
         # store as residual link  
         last_x = x
-        for i, attn in enumerate(self.attns):
-            x = attn(x, mask)
-            x = (x + last_x) / 2.
-            x = self.bns[i](x)
-            x = self.activation(x)
-            x = F.dropout(x, p=self.dropout, training=self.training)
+        for block in self.blocks:
+            x = block(x, last_x, mask)
             last_x = x
 
         x_mask = x[mask]
