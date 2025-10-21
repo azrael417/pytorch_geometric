@@ -67,12 +67,13 @@ class SGModule(torch.nn.Module):
     ):
         super().__init__()
 
+        self.num_layers = num_layers
         self.attns = torch.nn.ModuleList()
         self.fcs = torch.nn.ModuleList()
         self.fcs.append(torch.nn.Linear(in_channels, hidden_channels))
         self.bns = torch.nn.ModuleList()
         self.bns.append(torch.nn.LayerNorm(hidden_channels))
-        for _ in range(num_layers):
+        for _ in range(self.num_layers):
             self.attns.append(
                 SGFormerAttention(hidden_channels, num_heads, hidden_channels))
             self.bns.append(torch.nn.LayerNorm(hidden_channels))
@@ -106,8 +107,8 @@ class SGModule(torch.nn.Module):
         # store as residual link
         layer_.append(x)
 
-        for i, attn in enumerate(self.attns):
-            x = attn(x, mask)
+        for _ in range(self.num_layers):
+            x = self.attn[i](x, mask)
             x = (x + layer_[i]) / 2.
             x = self.bns[i + 1](x)
             x = self.activation(x)
