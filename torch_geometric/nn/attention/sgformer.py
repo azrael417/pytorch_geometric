@@ -55,9 +55,9 @@ class SGFormerAttention(torch.nn.Module):
         qs, ks, vs = self.q(x), self.k(x), self.v(x)
         # reshape and permute q, k and v to proper shape
         # (b, n, num_heads * head_channels) to (b, n, num_heads, head_channels)
-        qs, ks, vs = map(
-            lambda t: t.reshape(B, N, self.heads, self.head_channels),
-            (qs, ks, vs))
+        qs = qs.reshape(B, N, self.heads, self.head_channels)
+        ks = ks.reshape(B, N, self.heads, self.head_channels)
+        vs = vs.reshape(B, N, self.heads, self.head_channels)
 
         if mask is not None:
             mask = mask[:, :, None, None]
@@ -67,9 +67,8 @@ class SGFormerAttention(torch.nn.Module):
         qs[qs == 0] = epsilon
         ks[ks == 0] = epsilon
         # normalize input, shape not changed
-        qs, ks = map(
-            lambda t: t / torch.linalg.norm(t, ord=2, dim=-1, keepdim=True),
-            (qs, ks))
+        qs = qs / torch.linalg.norm(qs, ord=2, dim=-1, keepdim=True)
+        ks = ks / torch.linalg.norm(ks, ord=2, dim=-1, keepdim=True)
 
         # numerator
         kvs = torch.einsum("blhm,blhd->bhmd", ks, vs)
