@@ -61,7 +61,7 @@ class SGBlock(torch.nn.Module):
     def __init__(self, hidden_channels, num_heads, dropout):
         super().__init__()
         self.dropout = dropout
-        self.attn = SGFormerAttention(hidden_channels, num_heads, hidden_channels))
+        self.attn = SGFormerAttention(hidden_channels, num_heads, hidden_channels)
         self.bn = torch.nn.LayerNorm(hidden_channels)
         self.activation = F.relu
 
