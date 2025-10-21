@@ -108,7 +108,7 @@ class SGModule(torch.nn.Module):
         # store as residual link
         layer_.append(x)
 
-        for _ in range(self.num_layers):
+        for i in range(self.num_layers):
             x = self.attns[i](x, mask)
             x = (x + layer_[i]) / 2.
             x = self.bns[i + 1](x)
