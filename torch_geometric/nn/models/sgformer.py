@@ -87,21 +87,20 @@ class SGModule(torch.nn.Module):
         super().__init__()
 
         self.num_layers = num_layers
-        self.blocks = torch.nn.ModuleList()
         self.fcs = torch.nn.ModuleList()
         self.fcs.append(torch.nn.Linear(in_channels, hidden_channels))
         self.initial_bn = torch.nn.LayerNorm(hidden_channels)
+        self.blocks = torch.nn.ModuleList()
         for _ in range(self.num_layers):
-            self.block.append(SGBlock(hidden_channels, num_heads, dropout))
+            self.blocks.append(SGBlock(hidden_channels, num_heads, dropout))
 
         self.dropout = dropout
         self.activation = F.relu
 
     def reset_parameters(self):
-        for attn in self.attns:
-            attn.reset_parameters()
-        for bn in self.bns:
-            bn.reset_parameters()
+        for block in self.blocks:
+            block.attn.reset_parameters()
+            block.bn.reset_parameters()
         for fc in self.fcs:
             fc.reset_parameters()
 
